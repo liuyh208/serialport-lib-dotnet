@@ -35,7 +35,7 @@ serialPort.MessageReceived += delegate(object sender, MessageReceivedEventArgs a
 };
 
 // Set port options
-serialPort.SetPort("/dev/ttyUSB0", 115200);
+serialPort.SetPort("COM1", 115200);
 
 // Connect the serial port
 serialPort.Connect();
