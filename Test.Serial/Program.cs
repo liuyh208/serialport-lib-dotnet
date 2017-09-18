@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Threading;
 
 using SerialPortLib;
@@ -8,9 +9,10 @@ namespace Test.Serial
 {
     class MainClass
     {
-        private static string defaultPort = "/dev/ttyUSB0";
+        private static string defaultPort = "COM1";
         private static SerialPortInput serialPort;
-
+        private static SerialPortInput serialPort2;
+        private static  int sumBytes = 0;
         public static void Main(string[] args)
         {
             // NOTE: To disable debug output uncomment the following two lines
@@ -19,7 +21,12 @@ namespace Test.Serial
 
             serialPort = new SerialPortInput();
             serialPort.ConnectionStatusChanged += SerialPort_ConnectionStatusChanged;
-            serialPort.MessageReceived += SerialPort_MessageReceived;
+
+            serialPort2=new SerialPortInput();
+            serialPort2.SetPort("COM2");
+            serialPort2.Connect();
+
+            serialPort2.MessageReceived += SerialPort2_MessageReceived;
 
             while (true)
             {
@@ -38,7 +45,7 @@ namespace Test.Serial
             
                 serialPort.SetPort(port, 115200);
                 serialPort.Connect();
-
+                sumBytes = 0;
                 Console.WriteLine("Waiting for serial port connection on {0}.", port);
                 while (!serialPort.IsConnected)
                 {
@@ -50,25 +57,31 @@ namespace Test.Serial
                 // Try sending some data if connected
                 if (serialPort.IsConnected)
                 {
-                    Console.WriteLine("\nConnected! Sending test message 5 times.");
-                    for (int s = 0; s < 5; s++)
-                    {
-                        Thread.Sleep(1000);
-                        Console.WriteLine("\nSEND [{0}]", (s + 1));
-                        serialPort.SendMessage(testMessage);
-                    }
+                    //Console.WriteLine("\nConnected! Sending test message 5 times.");
+                    //for (int s = 0; s < 5; s++)
+                    //{
+                    //    Thread.Sleep(1000);
+                    //    Console.WriteLine("\nSEND [{0}]", (s + 1));
+                    //    serialPort.SendMessage(testMessage);
+                    //}
+                    
+                    var bs = File.ReadAllBytes(@"d://TestData.txt");
+                    Console.WriteLine("{0} start Send file^.",DateTime.Now.ToLocalTime());
+                    serialPort.SendMessage(bs);
+                    Console.WriteLine("{0} Send file over,total: {1} bytes", DateTime.Now.ToLocalTime(),bs.Length);
                 }
                 Console.WriteLine("\nTest sequence completed, now disconnecting.");
 
-                serialPort.Disconnect();
+               // serialPort.Disconnect();
             }
         }
 
-        static void SerialPort_MessageReceived(object sender, MessageReceivedEventArgs args)
+        static void SerialPort2_MessageReceived(object sender, MessageReceivedEventArgs args)
         {
-            Console.WriteLine("Received message: {0}", BitConverter.ToString(args.Data));
+            sumBytes = sumBytes + args.Data.Length;
+            Console.WriteLine("{1} COM2 Received bytes: {0} / {2 }", args.Data.Length, DateTime.Now.ToLongTimeString(), sumBytes);
             // On every message received we send an ACK message back to the device
-            serialPort.SendMessage(new byte[] { 0x06 });
+           // serialPort.SendMessage(new byte[] { 0x06 });
         }
 
         static void SerialPort_ConnectionStatusChanged(object sender, ConnectionStatusChangedEventArgs args)

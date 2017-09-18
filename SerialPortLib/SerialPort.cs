@@ -22,6 +22,7 @@
 
 using System;
 using System.Diagnostics;
+using System.IO;
 using System.IO.Ports;
 using System.Threading;
 
@@ -55,6 +56,13 @@ namespace SerialPortLib
 
         private object accessLock = new object();
         private bool disconnectRequested = false;
+        MemoryStream ReceiveStream=new MemoryStream();
+        
+        #endregion
+
+        #region property
+
+        public int BagSize { get; set; }
 
         #endregion
 
@@ -95,6 +103,10 @@ namespace SerialPortLib
                 Open();
                 connectionWatcher = new Thread(ConnectionWatcherTask);
                 connectionWatcher.Start();
+            }
+            if (BagSize==0)
+            {
+                BagSize = 1024;
             }
             return IsConnected;
         }
@@ -165,6 +177,7 @@ namespace SerialPortLib
                     _serialPort.Write(message, 0, message.Length);
                     success = true;
                     logger.Debug(BitConverter.ToString(message));
+                   
                 }
                 catch (Exception e)
                 {
@@ -185,7 +198,10 @@ namespace SerialPortLib
             bool success = false;
             lock (accessLock)
             {
-                Close();
+                if (_serialPort!=null && _serialPort.IsOpen)
+                {
+                    return true;
+                }
                 try
                 {
                     bool tryOpen = true;
@@ -276,6 +292,9 @@ namespace SerialPortLib
                         int readbytes = 0;
                         while (_serialPort.Read(message, readbytes, msglen - readbytes) <= 0)
                             ; // noop
+
+
+                        
                         if (MessageReceived != null)
                         {
                             OnMessageReceived(new MessageReceivedEventArgs(message));
